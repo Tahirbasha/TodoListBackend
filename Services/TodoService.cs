@@ -43,7 +43,7 @@ namespace TodoList.NewFolder
             }
             await _todoContext.TodoList.AddRangeAsync(TodoList);
             await _todoContext.SaveChangesAsync();
-            return _todoContext.TodoList.ToList();
+            return _todoContext.TodoList.Where(u => u.UserId == GetUserId()).ToList();
 
         }
 
@@ -63,7 +63,7 @@ namespace TodoList.NewFolder
                 }
             }
             await _todoContext.SaveChangesAsync();
-            return _todoContext.TodoList.ToList();
+            return _todoContext.TodoList.Where(u => u.UserId == GetUserId()).ToList();
 
         }
 
@@ -82,7 +82,7 @@ namespace TodoList.NewFolder
             todoList.RemoveRange(todos);
             await _todoContext.SaveChangesAsync();
 
-            return _todoContext.TodoList.ToList();
+            return _todoContext.TodoList.Where(u => u.UserId == GetUserId()).ToList();
 
         }
     }

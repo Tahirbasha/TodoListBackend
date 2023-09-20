@@ -7,10 +7,10 @@ namespace TodoList.Interfaces
     {
         List<TodoItem> GetTodos();
 
-        Task<List<TodoItem>> AddTodos(AddTodoDto Todo);
+        Task<List<TodoItem>> AddTodos(List<TodoItem> TodoItems);
 
-        Task<List<TodoItem>> UpdateTodo(List<UpdateTodo> Todo);
+       /* Task<List<TodoItem>> UpdateTodo(List<UpdateTodo> Todo);
 
-        Task<List<TodoItem>> DeleteTodo(List<int> Id);
+        Task<List<TodoItem>> DeleteTodo(List<int> Id);*/
     }
 }

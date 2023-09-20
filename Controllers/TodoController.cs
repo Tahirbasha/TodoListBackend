@@ -17,16 +17,16 @@ namespace TodoList.Controllers
             _todoService = todoService;   
         }
         [HttpGet("GetTodos")]
-        public ActionResult<List<TodoItem>> GetTodos(int Id)
+        public ActionResult<List<TodoItem>> GetTodos()
         {
             return Ok(_todoService.GetTodos());
         }
-        [HttpPost("AddTodo")]
-        public async Task<ActionResult<List<TodoItem>>> AddTodo([FromBody] AddTodoDto addTodos)
+        [HttpPost("SaveTodos")]
+        public async Task<ActionResult<List<TodoItem>>> AddTodo([FromBody] List<TodoItem> TodoItems)
         {
-            return Ok(await _todoService.AddTodos(addTodos));
+            return Ok(await _todoService.AddTodos(TodoItems));
         }
-        [HttpPost("UpdateTodo")]
+        /*[HttpPost("UpdateTodo")]
         public async Task<ActionResult<List<TodoItem>>> UpdateTodo(List<UpdateTodo> updateTodos)
         {
             return Ok(await _todoService.UpdateTodo(updateTodos));
@@ -35,7 +35,7 @@ namespace TodoList.Controllers
         public async Task<ActionResult<List<TodoItem>>> DeleteTodo(List<int> Ids)
         {
             return Ok(await _todoService.DeleteTodo(Ids));
-        }
+        }*/
 
     }
 }

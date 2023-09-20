@@ -1,9 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using TodoList.DataContext;
-using TodoList.Dto;
 using TodoList.Interfaces;
 using TodoList.Models;
 
@@ -25,32 +21,49 @@ namespace TodoList.NewFolder
         }
         private int GetUserId() => int.Parse(_httpContextAccessor.HttpContext!.User
             .FindFirstValue(ClaimTypes.NameIdentifier)!);
-        public async Task<List<TodoItem>> AddTodos(AddTodoDto Todos)
+        public async Task<List<TodoItem>> AddTodos(List<TodoItem> Todos)
         {
 
             DateTime dateTime = DateTime.Now;
-            List<TodoItem> TodoList = new List<TodoItem>();
-            foreach (var item in Todos.Todos)
+            foreach (var item in Todos)
             {
-                TodoItem todoItem = new TodoItem()
+                if (item.Id is null || item.Id == 0)
                 {
-                    Todo = item,
-                    Status = "Created",
-                    CreatedAt = dateTime.ToString(),
-                    UserId = GetUserId()
-                };
-                TodoList.Add(todoItem);
+                    TodoItem todoItem = new TodoItem()
+                    {
+                        Todo = item.Todo,
+                        Status = item.Status == "Completed" ? "Completed" : "Created",
+                        CreatedAt = dateTime.ToString(),
+                        UserId = GetUserId()
+                    };
+                    _todoContext.TodoList.Add(todoItem);
+                    await _todoContext.SaveChangesAsync();
+                }
+                else if (item.Id is not null && item.Status != "Deleted")
+                {
+                    TodoItem todoItem = _todoContext.TodoList.FirstOrDefault(t => t.Id == item.Id && t.UserId == GetUserId());
+                    if (todoItem != null)
+                    {
+                        todoItem.Todo = item.Todo;
+                        todoItem.Status = "Updated";
+                        todoItem.CreatedAt = item.CreatedAt;
+                    }
+                    await _todoContext.SaveChangesAsync();
+                }
+                else if (item.Status == "Deleted")
+                {
+                    _todoContext.TodoList.Remove(item);
+                    await _todoContext.SaveChangesAsync();
+
+                }
             }
-            await _todoContext.TodoList.AddRangeAsync(TodoList);
-            await _todoContext.SaveChangesAsync();
-            return _todoContext.TodoList.Where(u => u.UserId == GetUserId()).ToList();
+                return _todoContext.TodoList.Where(u => u.UserId == GetUserId()).ToList();
+            }
 
-        }
-
-        public async Task<List<TodoItem>> UpdateTodo(List<UpdateTodo> Todos)
+      /*  public async Task<List<TodoItem>> UpdateTodo(List<UpdateTodo> Todos)
         {
             var existingTodos = _todoContext.TodoList;
-            foreach(var updatedTodo in Todos)
+            foreach (var updatedTodo in Todos)
             {
                 TodoItem todoItem = _todoContext.TodoList.FirstOrDefault(t => t.Id == updatedTodo.Id && t.UserId == GetUserId());
                 DateTime dateTime = DateTime.Now;
@@ -58,7 +71,7 @@ namespace TodoList.NewFolder
                 {
                     todoItem.Todo = updatedTodo.Todo;
                     todoItem.Status = "Updated";
-                    todoItem.CreatedAt = dateTime.ToString();
+                    todoItem.CreatedAt = todoItem.CreatedAt;
                     existingTodos.Update(todoItem);
                 }
             }
@@ -84,6 +97,6 @@ namespace TodoList.NewFolder
 
             return _todoContext.TodoList.Where(u => u.UserId == GetUserId()).ToList();
 
-        }
+        }*/
     }
 }

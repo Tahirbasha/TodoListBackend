@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Any;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using TodoList.DataContext;
@@ -15,10 +16,12 @@ namespace TodoList.Controllers
     {
         private readonly TodoDataContext _todoContext;
         private readonly IConfiguration _configuration;
-        public UserController(TodoDataContext todoContext, IConfiguration configuration)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        public UserController(TodoDataContext todoContext, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _todoContext = todoContext;
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         [HttpGet("GetImage")]
@@ -60,12 +63,14 @@ namespace TodoList.Controllers
             var user = _todoContext.Users.FirstOrDefault(user => user.UserName.ToLower() == userCredentials.Username.ToLower());
             if (user is not null)
             {
-                return BadRequest("User already exist");
+                var Response = new ResponseDto<AnyType>()
+                {
+                    Message = "User already exist"
+                };
+                return BadRequest(Response);
             }
             try
             {
-                /*                CreateHashedPassword(userCredentials.Password, out byte[] passwordHash, out byte[] passwordSalt);
-                */
                 using (var hmac = new System.Security.Cryptography.HMACSHA512())
                 {
                     var passwordSalt = hmac.Key;
@@ -78,7 +83,22 @@ namespace TodoList.Controllers
                     };
                     await _todoContext.Users.AddAsync(User);
                     await _todoContext.SaveChangesAsync();
-                    return Ok("User created successfully!!!");
+                    var registeredUser = _todoContext.Users.FirstOrDefault(user => user.UserName.ToLower() == userCredentials.Username.ToLower());
+                    if (registeredUser is not null)
+                    {
+                        var Response = new ResponseDto<User>()
+                        {   Data = registeredUser,
+                            Message = "Thank you for registering!!!",
+                        };
+                    return Ok(Response);
+                    } else
+                    {
+                        var Response = new ResponseDto<AnyType>()
+                        {
+                            Message = "Password is incorrect!!!"
+                        };
+                        return BadRequest(Response);
+                    }
                 }
             }
             catch (Exception ex)
@@ -94,27 +114,57 @@ namespace TodoList.Controllers
                 .FirstOrDefaultAsync(u => u.UserName.ToLower().Equals(userLoginDto.Username.ToLower()));
             if (user is null)
             {
-                return BadRequest("User does not exist");
+                var Response = new ResponseDto<AnyType>()
+                {
+                    Message = "User does not exist"
+                };
+                return NotFound(Response);
             }
             else if (!VerifyPassword(userLoginDto.Password, user.PasswordHash, user.PasswordSalt))
             {
-                return BadRequest("Password is incorrect!!!");
+                var Response = new ResponseDto<AnyType>()
+                {
+                    Message = "Password is incorrect!!!"
+                };
+                return NotFound(Response);
+            }
+            else
+            {   
+                var Response = new ResponseDto<User>()
+                {   
+                    Data = user,
+                    authToken = CreateJwtToken(user)
+                };
+                return Ok(Response);
+            }
+        }
+        [HttpDelete("DeleteUser")]
+        public async Task<IActionResult> DeleteUser([FromQuery] int userId)
+        {
+            var user = await _todoContext.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+            if (user is not null)
+            {
+                _todoContext.Users.Remove(user);
+                var userTodos = _todoContext.TodoList.Where(todo => todo.UserId == user.UserId);
+                _todoContext.RemoveRange(userTodos);
+                await _todoContext.SaveChangesAsync();
+
+                var Response = new ResponseDto<AnyType>()
+                {
+                    Message = "Account deleted successfully"
+                };
+                return Ok(Response);
             }
             else
             {
-                return Ok(CreateJwtToken(user));
+                var Response = new ResponseDto<AnyType>()
+                {
+                    Message = "Something went wrong"
+                };
+                return BadRequest(Response);
             }
+
         }
-/*        public void CreateHashedPassword(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using (var hmac = new System.Security.Cryptography.HMACSHA512())
-            {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-            }
-
-        }*/
-
         private bool VerifyPassword(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using (var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt))

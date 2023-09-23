@@ -89,8 +89,9 @@ namespace TodoList.Controllers
                         var Response = new ResponseDto<User>()
                         {   Data = registeredUser,
                             Message = "Thank you for registering!!!",
+                            authToken = CreateJwtToken(registeredUser)
                         };
-                    return Ok(Response);
+                    return Ok(Response);    
                     } else
                     {
                         var Response = new ResponseDto<AnyType>()

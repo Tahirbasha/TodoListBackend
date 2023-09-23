@@ -17,7 +17,7 @@ namespace TodoList.NewFolder
 
         public List<TodoItem> GetTodos()
         {
-            return _todoContext.TodoList.Where(todo => todo.UserId == GetUserId()).ToList();
+            return _todoContext.TodoList.Where(todo => todo.UserId == GetUserId() && todo.Status != "Deleted").ToList();
         }
         private int GetUserId() => int.Parse(_httpContextAccessor.HttpContext!.User
             .FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -32,32 +32,36 @@ namespace TodoList.NewFolder
                     TodoItem todoItem = new TodoItem()
                     {
                         Todo = item.Todo,
-                        Status = item.Status == "Completed" ? "Completed" : "Created",
+                        Status = item.Status,
                         CreatedAt = dateTime.ToString(),
                         UserId = GetUserId()
                     };
                     _todoContext.TodoList.Add(todoItem);
                     await _todoContext.SaveChangesAsync();
-                }
-                else if (item.Id is not null && item.Status != "Deleted")
+                } else if (item.Id is not null && item.Status == "Completed")
                 {
                     TodoItem todoItem = _todoContext.TodoList.FirstOrDefault(t => t.Id == item.Id && t.UserId == GetUserId());
                     if (todoItem != null)
                     {
                         todoItem.Todo = item.Todo;
-                        todoItem.Status = "Updated";
+                        todoItem.Status = "Completed";
                         todoItem.CreatedAt = item.CreatedAt;
                     }
                     await _todoContext.SaveChangesAsync();
                 }
-                else if (item.Status == "Deleted")
+                else if (item.Id is not null && (item.Status == "Updated" || item.Status == "Deleted"))
                 {
-                    _todoContext.TodoList.Remove(item);
+                    TodoItem todoItem = _todoContext.TodoList.FirstOrDefault(t => t.Id == item.Id && t.UserId == GetUserId());
+                    if (todoItem != null)
+                    {
+                        todoItem.Todo = item.Todo;
+                        todoItem.Status = item.Status;
+                        todoItem.CreatedAt = item.CreatedAt;
+                    }
                     await _todoContext.SaveChangesAsync();
-
                 }
             }
-                return _todoContext.TodoList.Where(u => u.UserId == GetUserId()).ToList();
+                return _todoContext.TodoList.Where(todo => todo.UserId == GetUserId() && todo.Status != "Deleted").ToList();
             }
 
       /*  public async Task<List<TodoItem>> UpdateTodo(List<UpdateTodo> Todos)
